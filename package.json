@@ -1,9 +1,11 @@
 {
   "name": "burner",
   "private": true,
+  "packageManager": "yarn@1.22.22",
   "scripts": {
-    "dev": "npm --prefix client run dev",
-    "build": "npm --prefix client run build",
-    "preview": "npm --prefix client run preview"
+    "preinstall": "npx only-allow yarn",
+    "dev": "yarn --cwd client dev",
+    "build": "yarn --cwd client build",
+    "preview": "yarn --cwd client preview"
   }
 }
