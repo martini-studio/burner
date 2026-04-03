@@ -1,21 +1,25 @@
 # Burner
 
-A personal-use React app for managing temporary SMS phone numbers using Twilio. Built with a mobile-first, PWA-enabled interface inspired by Hushed.
+A fully client-side React PWA for managing temporary SMS phone numbers using Twilio. No backend server required — all data is persisted locally in your browser using IndexedDB, and Twilio API calls are made directly from the client.
 
 ## Features
 
 - **Provision temporary phone numbers** from Twilio (defaults to Australian numbers, supports US, GB, CA, NZ)
 - **Send and receive SMS** through a native-feeling chat interface
 - **Conversation management** with contact labeling and unread indicators
+- **Settings page** to configure Twilio credentials (stored locally, never leaves your browser)
+- **Automatic message polling** — checks Twilio for incoming messages on a configurable interval
 - **PWA support** — install on your phone's home screen for a native app experience
-- **Real-time polling** for incoming messages
-- **SQLite database** for local message storage
+- **IndexedDB persistence** via Dexie.js — robust local storage that survives browser restarts
+- **Dark mode** following system preference
 
 ## Tech Stack
 
-- **Frontend**: React + TypeScript, Vite, Tailwind CSS v4, shadcn/ui, React Router, TanStack Query
-- **Backend**: Express.js, SQLite (better-sqlite3), Twilio SDK
-- **PWA**: Service worker with offline shell support
+- **Frontend**: React + TypeScript, Vite, Tailwind CSS v4, shadcn/ui
+- **Routing**: React Router
+- **State**: TanStack Query (cache + polling)
+- **Storage**: IndexedDB via Dexie.js
+- **SMS**: Twilio REST API (called directly from the browser)
 
 ## Setup
 
@@ -24,53 +28,36 @@ A personal-use React app for managing temporary SMS phone numbers using Twilio. 
 - Node.js 18+
 - A [Twilio account](https://www.twilio.com/) with Account SID and Auth Token
 
-### Environment Variables
-
-Copy the example env file in the server directory:
-
-```bash
-cp server/.env.example server/.env
-```
-
-Fill in your Twilio credentials:
-
-```
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-WEBHOOK_BASE_URL=https://your-server.ngrok.io
-PORT=3001
-```
-
-The `WEBHOOK_BASE_URL` is needed so Twilio can forward incoming SMS to your server. Use [ngrok](https://ngrok.com/) for local development.
-
 ### Install & Run
 
 ```bash
-# Install all dependencies
+cd client
 npm install
-cd client && npm install
-cd ../server && npm install
-cd ..
-
-# Run both client and server in development
 npm run dev
 ```
 
-The client runs on `http://localhost:5173` and proxies API requests to the server on port 3001.
+Open `http://localhost:5173`, go to **Settings**, and enter your Twilio Account SID and Auth Token. Then start provisioning numbers and sending messages.
 
 ### Production Build
 
 ```bash
-npm run build    # Builds the client
-npm start        # Starts the server (serves client build + API)
+cd client
+npm run build
+npm run preview
 ```
 
-## Incoming SMS Webhook
+The `dist/` folder can be deployed to any static hosting provider (Vercel, Netlify, Cloudflare Pages, etc.).
 
-For Twilio to deliver incoming SMS to your app, set up a public URL pointing to your server. During development, use ngrok:
+## How It Works
 
-```bash
-ngrok http 3001
-```
+1. **Credentials** — Your Twilio Account SID and Auth Token are stored in `localStorage`. They are used to authenticate directly against the Twilio REST API from your browser.
 
-Then set `WEBHOOK_BASE_URL` in your `.env` to the ngrok URL. The app automatically configures new numbers to use `{WEBHOOK_BASE_URL}/api/webhooks/incoming-sms` as their SMS webhook.
+2. **Data Storage** — All numbers, conversations, and messages are stored in IndexedDB (via Dexie.js). This is a real database in your browser with indexed queries, and persists across sessions.
+
+3. **Sending Messages** — When you send an SMS, the app calls the Twilio Messages API directly using your credentials.
+
+4. **Receiving Messages** — The app polls the Twilio Messages API on a configurable interval to check for new incoming messages and stores them locally.
+
+## Security Note
+
+This is a personal-use app. Your Twilio credentials are stored in your browser's local storage and used to make authenticated API calls to Twilio directly. Do not use this on shared or public computers.
