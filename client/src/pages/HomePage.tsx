@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Phone, ChevronRight, Trash2, Pencil, MoreVertical } from 'lucide-react';
+import { Plus, Phone, ChevronRight, Trash2, Pencil, MoreVertical, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import type { PhoneNumber } from '@/types';
@@ -15,12 +15,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AddNumberDialog } from '@/components/AddNumberDialog';
 import { EditLabelDialog } from '@/components/EditLabelDialog';
+import { PageTransition } from '@/components/PageTransition';
 import { toast } from 'sonner';
 
 function formatPhone(phone: string) {
   if (phone.startsWith('+61')) {
     const local = phone.slice(3);
     return `+61 ${local.slice(0, 1)} ${local.slice(1, 5)} ${local.slice(5)}`;
+  }
+  if (phone.startsWith('+1')) {
+    const local = phone.slice(2);
+    return `+1 (${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`;
   }
   return phone;
 }
@@ -57,13 +62,15 @@ export function HomePage() {
   });
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border">
+    <PageTransition>
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
         <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto w-full">
-          <h1 className="text-lg font-semibold">My Numbers</h1>
-          <Button size="icon" variant="ghost" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-5 w-5" />
-          </Button>
+          <h1 className="text-lg font-semibold tracking-tight">SMS Hub</h1>
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -72,7 +79,13 @@ export function HomePage() {
           {isLoading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-xl" />
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
               ))}
             </div>
           ) : numbers && numbers.length > 0 ? (
@@ -84,7 +97,7 @@ export function HomePage() {
                   onTap={() => navigate(`/number/${num.id}`)}
                   onEdit={() => setEditingNumber(num)}
                   onDelete={() => {
-                    if (confirm('Release this number? This cannot be undone.')) {
+                    if (confirm('Release this number? This action cannot be undone and will remove the number from your Twilio account.')) {
                       deleteMutation.mutate(num.id);
                     }
                   }}
@@ -92,15 +105,15 @@ export function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-[60vh] px-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Phone className="h-8 w-8 text-primary" />
+            <div className="flex flex-col items-center justify-center h-[70vh] px-8 text-center">
+              <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                <Phone className="h-10 w-10 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold mb-2">No numbers yet</h2>
-              <p className="text-muted-foreground mb-6">
-                Get a temporary phone number to start sending and receiving SMS messages.
+              <h2 className="text-xl font-semibold mb-2">Get Started</h2>
+              <p className="text-muted-foreground mb-8 max-w-xs leading-relaxed">
+                Provision a temporary phone number to start sending and receiving SMS messages.
               </p>
-              <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+              <Button size="lg" onClick={() => setAddDialogOpen(true)} className="gap-2 rounded-full px-6">
                 <Plus className="h-4 w-4" /> Get a Number
               </Button>
             </div>
@@ -114,7 +127,7 @@ export function HomePage() {
         open={!!editingNumber}
         onOpenChange={(open) => !open && setEditingNumber(null)}
       />
-    </div>
+    </PageTransition>
   );
 }
 
@@ -131,52 +144,49 @@ function NumberRow({
 }) {
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 active:bg-muted/50 transition-colors cursor-pointer select-none"
+      className="flex items-center gap-3 px-4 py-3.5 active:bg-muted/50 transition-colors cursor-pointer select-none"
       onClick={onTap}
     >
-      <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-lg">
+      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 text-xl">
         {getCountryFlag(number.country_code)}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm truncate">
+          <span className="font-semibold text-[15px] truncate text-foreground">
             {number.label || formatPhone(number.phone_number)}
           </span>
           {number.unread_conversations && number.unread_conversations > 0 ? (
-            <Badge variant="default" className="h-5 min-w-5 px-1.5 text-xs rounded-full">
+            <Badge className="h-5 min-w-5 px-1.5 text-xs rounded-full bg-primary text-primary-foreground">
               {number.unread_conversations}
             </Badge>
           ) : null}
         </div>
         {number.label && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
+          <p className="text-[13px] text-muted-foreground truncate mt-0.5">
             {formatPhone(number.phone_number)}
           </p>
         )}
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {number.country_code}
-        </p>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger
           onClick={(e) => e.stopPropagation()}
-          className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground"
+          className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-muted transition-colors"
         >
-          <MoreVertical className="h-4 w-4" />
+          <MoreVertical className="h-4 w-4 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
             <Pencil className="h-4 w-4 mr-2" /> Edit Label
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="text-destructive"
+            variant="destructive"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
           >
             <Trash2 className="h-4 w-4 mr-2" /> Release Number
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+      <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Send, Phone, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, Send, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import type { Conversation, Message } from '@/types';
+import type { Message } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,11 +16,16 @@ import {
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 import { NewConversationHeader } from '@/components/NewConversationHeader';
+import { PageTransition } from '@/components/PageTransition';
 
 function formatPhone(phone: string) {
   if (phone.startsWith('+61')) {
     const local = phone.slice(3);
     return `+61 ${local.slice(0, 1)} ${local.slice(1, 5)} ${local.slice(5)}`;
+  }
+  if (phone.startsWith('+1')) {
+    const local = phone.slice(2);
+    return `+1 (${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`;
   }
   return phone;
 }
@@ -34,7 +39,7 @@ function formatDateSeparator(dateStr: string) {
   const date = new Date(dateStr + 'Z');
   if (isToday(date)) return 'Today';
   if (isYesterday(date)) return 'Yesterday';
-  return format(date, 'EEEE, d MMMM yyyy');
+  return format(date, 'EEEE, d MMMM');
 }
 
 export function ChatPage() {
@@ -45,11 +50,12 @@ export function ChatPage() {
   const [activeConvId, setActiveConvId] = useState<number | null>(
     conversationId ? Number(conversationId) : null
   );
-  const [isNewConversation, setIsNewConversation] = useState(!conversationId);
+  const [isNewConversation] = useState(!conversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [editingContact, setEditingContact] = useState(false);
   const [contactName, setContactName] = useState('');
+  const prevMessageCount = useRef(0);
 
   const { data: numbers } = useQuery({
     queryKey: ['numbers'],
@@ -101,11 +107,21 @@ export function ChatPage() {
     },
   });
 
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: prevMessageCount.current > 0 ? 'smooth' : 'auto',
+      });
     }
-  }, [messages]);
+  }, []);
+
+  useEffect(() => {
+    if (messages) {
+      scrollToBottom();
+      prevMessageCount.current = messages.length;
+    }
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     if (conversation) {
@@ -115,18 +131,14 @@ export function ChatPage() {
 
   const handleSend = async () => {
     const text = message.trim();
-    if (!text) return;
-
-    if (activeConvId) {
-      sendMutation.mutate({ convId: activeConvId, body: text });
-    }
+    if (!text || !activeConvId) return;
+    sendMutation.mutate({ convId: activeConvId, body: text });
   };
 
   const handleNewConversation = async (contactNumber: string) => {
     try {
       const conv = await api.conversations.create(Number(numberId), contactNumber);
       setActiveConvId(conv.id);
-      setIsNewConversation(false);
       queryClient.invalidateQueries({ queryKey: ['conversations', numberId] });
       navigate(`/number/${numberId}/chat/${conv.id}`, { replace: true });
     } catch (err: any) {
@@ -144,8 +156,8 @@ export function ChatPage() {
 
       if (dateKey !== lastDate) {
         elements.push(
-          <div key={`date-${dateKey}`} className="flex justify-center my-4">
-            <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+          <div key={`date-${dateKey}`} className="flex justify-center my-3">
+            <span className="text-[11px] font-medium text-muted-foreground bg-muted/60 backdrop-blur-sm px-3 py-1 rounded-full">
               {formatDateSeparator(msg.created_at)}
             </span>
           </div>
@@ -154,25 +166,26 @@ export function ChatPage() {
       }
 
       const isOutbound = msg.direction === 'outbound';
-      const showTail = i === msgs.length - 1 ||
-        msgs[i + 1]?.direction !== msg.direction ||
-        !isSameDay(new Date(msgs[i + 1]?.created_at + 'Z'), msgDate);
+      const nextMsg = msgs[i + 1];
+      const isLastInGroup = !nextMsg ||
+        nextMsg.direction !== msg.direction ||
+        !isSameDay(new Date(nextMsg.created_at + 'Z'), msgDate);
 
       elements.push(
         <div
           key={msg.id}
-          className={`flex ${isOutbound ? 'justify-end' : 'justify-start'} px-3 mb-0.5 ${showTail ? 'mb-2' : ''}`}
+          className={`flex ${isOutbound ? 'justify-end' : 'justify-start'} px-3 ${isLastInGroup ? 'mb-2.5' : 'mb-0.5'}`}
         >
           <div
-            className={`max-w-[80%] px-3 py-2 text-sm leading-relaxed ${
+            className={`max-w-[78%] px-3.5 py-2 text-[15px] leading-[1.4] shadow-sm ${
               isOutbound
-                ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-md'
-                : 'bg-muted rounded-2xl rounded-bl-md'
+                ? `bg-primary text-primary-foreground ${isLastInGroup ? 'rounded-[20px] rounded-br-[6px]' : 'rounded-[20px]'}`
+                : `bg-muted text-foreground ${isLastInGroup ? 'rounded-[20px] rounded-bl-[6px]' : 'rounded-[20px]'}`
             }`}
           >
             <p className="whitespace-pre-wrap break-words">{msg.body}</p>
-            <p className={`text-[10px] mt-1 text-right ${
-              isOutbound ? 'text-primary-foreground/60' : 'text-muted-foreground'
+            <p className={`text-[10px] mt-0.5 text-right leading-none ${
+              isOutbound ? 'text-primary-foreground/50' : 'text-muted-foreground/70'
             }`}>
               {formatMessageTime(msg.created_at)}
             </p>
@@ -186,25 +199,28 @@ export function ChatPage() {
 
   if (isNewConversation) {
     return (
-      <div className="flex flex-col h-full">
+      <PageTransition>
         <NewConversationHeader
           onBack={() => navigate(`/number/${numberId}`)}
           onSelectContact={handleNewConversation}
           fromNumber={currentNumber?.phone_number || ''}
         />
-      </div>
+      </PageTransition>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="flex items-center gap-2 px-2 h-14 max-w-lg mx-auto w-full">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/number/${numberId}`)}>
+    <PageTransition>
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
+        <div className="flex items-center gap-1 px-2 h-14 max-w-lg mx-auto w-full">
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate(`/number/${numberId}`)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1 min-w-0" onClick={() => setEditingContact(true)}>
-            <h1 className="text-base font-semibold truncate cursor-pointer">
+          <div
+            className="flex-1 min-w-0 px-1 cursor-pointer"
+            onClick={() => setEditingContact(true)}
+          >
+            <h1 className="text-[15px] font-semibold truncate">
               {conversation?.contact_name || formatPhone(conversation?.contact_number || '')}
             </h1>
             {conversation?.contact_name && (
@@ -214,22 +230,22 @@ export function ChatPage() {
             )}
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent hover:text-accent-foreground">
-              <MoreVertical className="h-5 w-5" />
+            <DropdownMenuTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-muted transition-colors">
+              <MoreVertical className="h-5 w-5 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditingContact(true)}>
-                <Pencil className="h-4 w-4 mr-2" /> Edit Contact Name
+                <Pencil className="h-4 w-4 mr-2" /> Edit Contact
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-destructive"
+                variant="destructive"
                 onClick={() => {
                   if (activeConvId && confirm('Delete this conversation?')) {
                     deleteConvMutation.mutate(activeConvId);
                   }
                 }}
               >
-                <Trash2 className="h-4 w-4 mr-2" /> Delete Conversation
+                <Trash2 className="h-4 w-4 mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -237,7 +253,7 @@ export function ChatPage() {
       </header>
 
       {editingContact && conversation && (
-        <div className="border-b border-border bg-muted/30 px-4 py-3 max-w-lg mx-auto w-full">
+        <div className="border-b border-border bg-muted/30 backdrop-blur-sm px-4 py-3 max-w-lg mx-auto w-full">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -250,12 +266,12 @@ export function ChatPage() {
               placeholder="Contact name"
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
-              className="flex-1 h-9"
+              className="flex-1 h-9 rounded-full"
             />
-            <Button type="submit" size="sm" disabled={updateContactMutation.isPending}>
+            <Button type="submit" size="sm" className="rounded-full" disabled={updateContactMutation.isPending}>
               Save
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setEditingContact(false)}>
+            <Button type="button" size="sm" variant="ghost" className="rounded-full" onClick={() => setEditingContact(false)}>
               Cancel
             </Button>
           </form>
@@ -271,39 +287,39 @@ export function ChatPage() {
             <div className="p-4 space-y-3">
               {[1, 2, 3, 4].map(i => (
                 <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'} px-3`}>
-                  <Skeleton className={`h-12 ${i % 2 === 0 ? 'w-48' : 'w-56'} rounded-2xl`} />
+                  <Skeleton className={`h-10 ${i % 2 === 0 ? 'w-44' : 'w-52'} rounded-[20px]`} />
                 </div>
               ))}
             </div>
           ) : messages && messages.length > 0 ? (
             renderMessages(messages)
           ) : (
-            <div className="flex flex-col items-center justify-center h-32 text-center">
-              <p className="text-sm text-muted-foreground">No messages yet. Say hello!</p>
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <p className="text-sm text-muted-foreground">Send your first message</p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="sticky bottom-0 bg-background border-t border-border safe-area-bottom">
+      <div className="sticky bottom-0 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
         <div className="max-w-lg mx-auto w-full px-3 py-2">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
             className="flex items-end gap-2"
           >
-            <div className="flex-1 relative">
+            <div className="flex-1">
               <Input
                 ref={inputRef}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Message..."
-                className="pr-3 rounded-full h-10 bg-muted/50 border-0 focus-visible:ring-1"
+                className="rounded-full h-10 bg-muted/60 border-0 focus-visible:ring-1 focus-visible:ring-primary/30 px-4 text-[15px]"
               />
             </div>
             <Button
               type="submit"
               size="icon"
-              className="rounded-full h-10 w-10 shrink-0"
+              className="rounded-full h-10 w-10 shrink-0 shadow-sm"
               disabled={!message.trim() || sendMutation.isPending || !activeConvId}
             >
               <Send className="h-4 w-4" />
@@ -311,6 +327,6 @@ export function ChatPage() {
           </form>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
