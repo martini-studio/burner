@@ -39,4 +39,5 @@ export interface AvailableNumber {
   locality: string;
   region: string;
   capabilities: Record<string, boolean>;
+  addressRequirements: string;
 }

@@ -37,11 +37,12 @@ export const api = {
         locality: n.locality || '',
         region: n.region || '',
         capabilities: n.capabilities as unknown as Record<string, boolean>,
+        addressRequirements: n.address_requirements || 'none',
       }));
     },
 
-    async provision(phoneNumber: string, label: string): Promise<PhoneNumber> {
-      const purchased = await twilio.provisionNumber(phoneNumber);
+    async provision(phoneNumber: string, label: string, addressSid?: string): Promise<PhoneNumber> {
+      const purchased = await twilio.provisionNumber(phoneNumber, addressSid);
       const ts = now();
       const id = await db.numbers.add({
         phone_number: purchased.phone_number,
