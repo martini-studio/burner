@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sms-hub-v1';
+const CACHE_NAME = 'burner-v1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

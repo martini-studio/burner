@@ -1,4 +1,4 @@
-# SMS Hub
+# Burner
 
 A personal-use React app for managing temporary SMS phone numbers using Twilio. Built with a mobile-first, PWA-enabled interface inspired by Hushed.
 

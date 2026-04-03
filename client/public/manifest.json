@@ -1,7 +1,7 @@
 {
-  "name": "SMS Hub",
-  "short_name": "SMS Hub",
-  "description": "Temporary SMS numbers powered by Twilio",
+  "name": "Burner",
+  "short_name": "Burner",
+  "description": "Burner phone numbers powered by Twilio",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

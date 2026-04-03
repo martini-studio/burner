@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '..', 'data', 'sms.db');
+const DB_PATH = path.join(__dirname, '..', 'data', 'burner.db');
 
 import fs from 'fs';
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
