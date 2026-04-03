@@ -43,12 +43,26 @@ export interface TwilioAvailableNumber {
   locality: string;
   region: string;
   capabilities: { sms: boolean; mms: boolean; voice: boolean };
+  address_requirements: string;
 }
 
 export interface TwilioIncomingNumber {
   sid: string;
   phone_number: string;
   friendly_name: string;
+}
+
+export interface TwilioAddress {
+  sid: string;
+  friendly_name: string;
+  customer_name: string;
+  street: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  iso_country: string;
+  validated: boolean;
+  verified: boolean;
 }
 
 export interface TwilioMessageResource {
@@ -79,13 +93,24 @@ export const twilio = {
     return [];
   },
 
-  async provisionNumber(phoneNumber: string): Promise<TwilioIncomingNumber> {
+  async listAddresses(): Promise<TwilioAddress[]> {
+    const data = await twilioRequest<{ addresses: TwilioAddress[] }>(
+      '/Addresses.json?PageSize=100'
+    );
+    return data.addresses || [];
+  },
+
+  async provisionNumber(phoneNumber: string, addressSid?: string): Promise<TwilioIncomingNumber> {
+    const params: Record<string, string> = { PhoneNumber: phoneNumber };
+    if (addressSid) {
+      params.AddressSid = addressSid;
+    }
     return twilioRequest<TwilioIncomingNumber>(
       '/IncomingPhoneNumbers.json',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formBody({ PhoneNumber: phoneNumber }),
+        body: formBody(params),
       }
     );
   },
