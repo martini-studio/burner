@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Phone, MapPin, Loader2 } from 'lucide-react';
 import type { AvailableNumber } from '@/types';
-import { hasCredentials } from '@/lib/settings';
+import { hasCredentials, getSettings } from '@/lib/settings';
 
 const BUNDLE_REQUIRED: Record<string, string[]> = {
   AU: ['mobile', 'local'],
@@ -51,7 +51,7 @@ interface Props {
 
 export function AddNumberDialog({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
-  const [country, setCountry] = useState('AU');
+  const [country, setCountry] = useState(() => getSettings().defaultCountry);
   const [selectedNumber, setSelectedNumber] = useState<string | null>(null);
   const [selectedAddressReq, setSelectedAddressReq] = useState<string>('none');
   const [selectedNumberType, setSelectedNumberType] = useState<string>('');
@@ -89,6 +89,7 @@ export function AddNumberDialog({ open, onOpenChange }: Props) {
 
   const handleClose = () => {
     setStep('select');
+    setCountry(getSettings().defaultCountry);
     setSelectedNumber(null);
     setSelectedAddressReq('none');
     setSelectedNumberType('');
@@ -149,7 +150,7 @@ export function AddNumberDialog({ open, onOpenChange }: Props) {
             <div>
               <Label className="mb-1.5 block text-sm">Country</Label>
               <Select value={country} onValueChange={(val) => { if (val) setCountry(val); setSelectedNumber(null); }}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
