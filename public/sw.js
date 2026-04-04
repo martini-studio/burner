@@ -1,4 +1,4 @@
-const CACHE_NAME = 'burner-v1';
+const CACHE_NAME = 'burner-__BUILD_HASH__';
 const BASE = self.registration.scope;
 const STATIC_ASSETS = [
   BASE,

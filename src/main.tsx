@@ -11,6 +11,18 @@ createRoot(document.getElementById('root')!).render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}sw.js`)
+      .then((reg) => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker?.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+              window.location.reload();
+            }
+          });
+        });
+      })
+      .catch(() => {});
   });
 }
