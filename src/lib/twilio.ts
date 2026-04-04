@@ -304,6 +304,10 @@ export const twilio = {
     return Array.from(unique.values());
   },
 
+  async getBalance(): Promise<{ balance: string; currency: string }> {
+    return twilioRequest<{ balance: string; currency: string }>('/Balance.json');
+  },
+
   async testCredentials(): Promise<{ success: boolean; friendlyName?: string }> {
     try {
       const data = await twilioRequest<{ friendly_name: string }>('.json');

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Phone, ChevronRight, Trash2, Pencil, MoreVertical, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { twilio } from '@/lib/twilio';
+import { hasCredentials } from '@/lib/settings';
 import type { PhoneNumber } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +54,13 @@ export function HomePage() {
     queryFn: api.numbers.list,
   });
 
+  const { data: balance } = useQuery({
+    queryKey: ['balance'],
+    queryFn: twilio.getBalance,
+    enabled: hasCredentials(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: api.numbers.delete,
     onSuccess: () => {
@@ -65,7 +74,14 @@ export function HomePage() {
     <PageTransition>
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
         <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto w-full">
-          <h1 className="text-lg font-semibold tracking-tight">Burner</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-lg font-semibold tracking-tight">Burner</h1>
+            {balance && (
+              <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15 text-xs font-medium tabular-nums">
+                {parseFloat(balance.balance).toLocaleString(undefined, { style: 'currency', currency: balance.currency })}
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => navigate('/settings')}>
               <Settings className="h-5 w-5" />
