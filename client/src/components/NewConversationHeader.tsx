@@ -1,38 +1,47 @@
-import { ArrowLeft, Send } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface Props {
   onBack: () => void;
-  onSelectContact: (phoneNumber: string) => void;
+  onSend: (phoneNumber: string, message: string) => void;
   fromNumber: string;
+  isSending?: boolean;
 }
 
-function formatPhone(phone: string) {
-  if (phone.startsWith('+61')) {
-    const local = phone.slice(3);
-    return `+61 ${local.slice(0, 1)} ${local.slice(1, 5)} ${local.slice(5)}`;
-  }
-  return phone;
-}
-
-export function NewConversationHeader({ onBack, onSelectContact, fromNumber }: Props) {
-  const [phone, setPhone] = useState('');
-
-  const handleSubmit = () => {
-    let number = phone.trim();
-    if (!number) return;
-
-    if (!number.startsWith('+')) {
-      if (number.startsWith('0')) {
-        number = '+61' + number.slice(1);
-      } else {
-        number = '+' + number;
-      }
+function normalizePhone(raw: string): string {
+  let number = raw.trim();
+  if (!number) return '';
+  if (!number.startsWith('+')) {
+    if (number.startsWith('0')) {
+      number = '+61' + number.slice(1);
+    } else {
+      number = '+' + number;
     }
-    onSelectContact(number);
+  }
+  return number;
+}
+
+export function NewConversationHeader({ onBack, onSend, fromNumber, isSending }: Props) {
+  const [phone, setPhone] = useState('');
+  const [message, setMessage] = useState('');
+  const messageRef = useRef<HTMLInputElement>(null);
+
+  const canSend = phone.trim().length > 0 && message.trim().length > 0 && !isSending;
+
+  const handleSend = () => {
+    const number = normalizePhone(phone);
+    const text = message.trim();
+    if (!number || !text) return;
+    onSend(number, text);
   };
+
+  useEffect(() => {
+    if (phone.trim() && messageRef.current) {
+      messageRef.current.focus();
+    }
+  }, []);
 
   return (
     <>
@@ -45,39 +54,49 @@ export function NewConversationHeader({ onBack, onSelectContact, fromNumber }: P
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto w-full px-4 py-6 flex-1">
-        <div className="space-y-6">
-          <div className="bg-muted/30 rounded-2xl p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">From</p>
-            <p className="text-[15px] font-medium">{formatPhone(fromNumber)}</p>
-          </div>
+      <div className="max-w-lg mx-auto w-full px-4 pt-4 pb-2 border-b border-border">
+        <div className="flex items-center gap-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider shrink-0">To</p>
+          <Input
+            autoFocus
+            type="tel"
+            placeholder="Phone number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="flex-1 h-9 border-0 bg-transparent p-0 text-[15px] focus-visible:ring-0 shadow-none"
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-1.5 mb-1 leading-relaxed">
+          Numbers starting with 0 get +61 automatically. International numbers need + country code.
+        </p>
+      </div>
 
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">To</p>
-            <div className="flex gap-2">
+      <div className="flex-1" />
+
+      <div className="sticky bottom-0 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
+        <div className="max-w-lg mx-auto w-full px-3 py-2">
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+            className="flex items-end gap-2"
+          >
+            <div className="flex-1">
               <Input
-                autoFocus
-                type="tel"
-                placeholder="Phone number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                className="flex-1 h-11 rounded-xl text-[15px]"
+                ref={messageRef}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Message..."
+                className="rounded-full h-10 bg-muted/60 border-0 focus-visible:ring-1 focus-visible:ring-primary/30 px-4 text-[15px]"
               />
-              <Button
-                onClick={handleSubmit}
-                disabled={!phone.trim()}
-                size="icon"
-                className="h-11 w-11 rounded-xl shrink-0"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-              Australian numbers starting with 0 will automatically get the +61 prefix.
-              For international numbers, include the full number with + country code.
-            </p>
-          </div>
+            <Button
+              type="submit"
+              size="icon"
+              className="rounded-full h-10 w-10 shrink-0 shadow-sm"
+              disabled={!canSend}
+            >
+              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
+          </form>
         </div>
       </div>
     </>

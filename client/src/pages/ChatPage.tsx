@@ -21,7 +21,7 @@ import { PageTransition } from '@/components/PageTransition';
 function formatPhone(phone: string) {
   if (phone.startsWith('+61')) {
     const local = phone.slice(3);
-    return `+61 ${local.slice(0, 1)} ${local.slice(1, 5)} ${local.slice(5)}`;
+    return `+61 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}`;
   }
   if (phone.startsWith('+1')) {
     const local = phone.slice(2);
@@ -135,14 +135,21 @@ export function ChatPage() {
     sendMutation.mutate({ convId: activeConvId, body: text });
   };
 
-  const handleNewConversation = async (contactNumber: string) => {
+  const [newMsgSending, setNewMsgSending] = useState(false);
+
+  const handleNewConversation = async (contactNumber: string, firstMessage: string) => {
+    setNewMsgSending(true);
     try {
       const conv = await api.conversations.create(Number(numberId), contactNumber);
+      await api.messages.send(conv.id, firstMessage);
       setActiveConvId(conv.id);
       queryClient.invalidateQueries({ queryKey: ['conversations', numberId] });
+      queryClient.invalidateQueries({ queryKey: ['messages', conv.id] });
       navigate(`/number/${numberId}/chat/${conv.id}`, { replace: true });
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setNewMsgSending(false);
     }
   };
 
@@ -202,8 +209,9 @@ export function ChatPage() {
       <PageTransition>
         <NewConversationHeader
           onBack={() => navigate(`/number/${numberId}`)}
-          onSelectContact={handleNewConversation}
+          onSend={handleNewConversation}
           fromNumber={currentNumber?.phone_number || ''}
+          isSending={newMsgSending}
         />
       </PageTransition>
     );

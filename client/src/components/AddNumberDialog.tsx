@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { api } from '@/lib/api';
-import { twilio, type TwilioAddress } from '@/lib/twilio';
+import { twilio } from '@/lib/twilio';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,9 +21,20 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Phone, MapPin, Loader2, MapPinned, ExternalLink } from 'lucide-react';
+import { Phone, MapPin, Loader2 } from 'lucide-react';
 import type { AvailableNumber } from '@/types';
 import { hasCredentials } from '@/lib/settings';
+
+const BUNDLE_REQUIRED: Record<string, string[]> = {
+  AU: ['mobile', 'local'],
+  GB: ['mobile', 'local'],
+  DE: ['mobile', 'local'],
+  FR: ['mobile', 'local'],
+};
+
+function needsBundleForCountry(country: string, numberType: string): boolean {
+  return BUNDLE_REQUIRED[country]?.includes(numberType) ?? false;
+}
 
 const COUNTRIES = [
   { code: 'AU', name: 'Australia', flag: '\u{1F1E6}\u{1F1FA}' },
@@ -38,17 +49,12 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-function formatAddress(addr: TwilioAddress): string {
-  const parts = [addr.street, addr.city, addr.region, addr.postal_code].filter(Boolean);
-  return parts.join(', ');
-}
-
 export function AddNumberDialog({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const [country, setCountry] = useState('AU');
   const [selectedNumber, setSelectedNumber] = useState<string | null>(null);
   const [selectedAddressReq, setSelectedAddressReq] = useState<string>('none');
-  const [selectedAddressSid, setSelectedAddressSid] = useState<string | null>(null);
+  const [selectedNumberType, setSelectedNumberType] = useState<string>('');
   const [label, setLabel] = useState('');
   const [step, setStep] = useState<'select' | 'confirm'>('select');
 
@@ -58,26 +64,21 @@ export function AddNumberDialog({ open, onOpenChange }: Props) {
     enabled: open && hasCredentials(),
   });
 
-  const { data: addresses, isLoading: addressesLoading } = useQuery({
+  const { data: addresses } = useQuery({
     queryKey: ['twilio-addresses'],
     queryFn: () => twilio.listAddresses(),
     enabled: open && hasCredentials(),
   });
 
-  const needsAddress = selectedAddressReq === 'any' || selectedAddressReq === 'local' || selectedAddressReq === 'foreign';
-  const addressesForCountry = selectedAddressReq === 'local'
-    ? (addresses || []).filter(a => a.iso_country === country)
-    : (addresses || []);
-
-  useEffect(() => {
-    if (addressesForCountry.length === 1 && needsAddress) {
-      setSelectedAddressSid(addressesForCountry[0].sid);
-    }
-  }, [addressesForCountry, needsAddress]);
+  const { data: bundles } = useQuery({
+    queryKey: ['twilio-bundles'],
+    queryFn: () => twilio.listBundles(),
+    enabled: open && hasCredentials(),
+  });
 
   const provisionMutation = useMutation({
-    mutationFn: ({ phoneNumber, label, addressSid }: { phoneNumber: string; label: string; addressSid?: string }) =>
-      api.numbers.provision(phoneNumber, label, addressSid),
+    mutationFn: ({ phoneNumber, label, addressSid, bundleSid }: { phoneNumber: string; label: string; addressSid?: string; bundleSid?: string }) =>
+      api.numbers.provision(phoneNumber, label, addressSid, bundleSid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['numbers'] });
       toast.success('Number provisioned!');
@@ -90,7 +91,7 @@ export function AddNumberDialog({ open, onOpenChange }: Props) {
     setStep('select');
     setSelectedNumber(null);
     setSelectedAddressReq('none');
-    setSelectedAddressSid(null);
+    setSelectedNumberType('');
     setLabel('');
     onOpenChange(false);
   };
@@ -98,19 +99,36 @@ export function AddNumberDialog({ open, onOpenChange }: Props) {
   const handleSelectNumber = (num: AvailableNumber) => {
     setSelectedNumber(num.phoneNumber);
     setSelectedAddressReq(num.addressRequirements || 'none');
-    setSelectedAddressSid(null);
+    setSelectedNumberType(num.numberType || '');
   };
 
   const handleProvision = () => {
     if (!selectedNumber) return;
-    provisionMutation.mutate({
-      phoneNumber: selectedNumber,
-      label,
-      addressSid: needsAddress && selectedAddressSid ? selectedAddressSid : undefined,
-    });
-  };
 
-  const canProvision = !needsAddress || !!selectedAddressSid;
+    const needsAddress = selectedAddressReq === 'any' || selectedAddressReq === 'local' || selectedAddressReq === 'foreign';
+    const matchingAddresses = selectedAddressReq === 'local'
+      ? (addresses || []).filter(a => a.iso_country === country)
+      : (addresses || []);
+    const addressSid = needsAddress && matchingAddresses.length > 0 ? matchingAddresses[0].sid : undefined;
+
+    let matchingBundles = (bundles || []).filter(
+      b => b.iso_country === country && b.number_type === selectedNumberType
+    );
+    if (matchingBundles.length === 0) {
+      matchingBundles = (bundles || []).filter(b => b.iso_country === country);
+    }
+    const bundleSid = matchingBundles.length > 0 ? matchingBundles[0].sid : undefined;
+
+    if (!bundleSid && needsBundleForCountry(country, selectedNumberType)) {
+      toast.error(
+        `A regulatory bundle is required for ${country} ${selectedNumberType} numbers. ` +
+        'Create one in the Twilio Console under Phone Numbers > Regulatory Compliance.'
+      );
+      return;
+    }
+
+    provisionMutation.mutate({ phoneNumber: selectedNumber, label, addressSid, bundleSid });
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -217,71 +235,13 @@ export function AddNumberDialog({ open, onOpenChange }: Props) {
               />
             </div>
 
-            {needsAddress && (
-              <div>
-                <Label className="mb-1.5 block text-sm">
-                  <span className="flex items-center gap-1.5">
-                    <MapPinned className="h-3.5 w-3.5" />
-                    Regulatory Address <span className="text-destructive">*</span>
-                  </span>
-                </Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  This country requires a verified address on your Twilio account to provision numbers.
-                </p>
-
-                {addressesLoading ? (
-                  <Skeleton className="h-14 w-full rounded-lg" />
-                ) : addressesForCountry.length > 0 ? (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                    {addressesForCountry.map((addr) => (
-                      <button
-                        key={addr.sid}
-                        onClick={() => setSelectedAddressSid(addr.sid)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                          selectedAddressSid === addr.sid
-                            ? 'bg-primary/10 ring-2 ring-primary'
-                            : 'bg-muted/30 hover:bg-muted/60'
-                        }`}
-                      >
-                        <MapPinned className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">
-                            {addr.friendly_name || addr.customer_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {formatAddress(addr)}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-muted/30 rounded-lg p-4 text-center space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      No addresses found on your Twilio account
-                      {selectedAddressReq === 'local' ? ` for ${country}` : ''}.
-                    </p>
-                    <a
-                      href="https://console.twilio.com/us1/develop/phone-numbers/regulatory-compliance/addresses"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-                    >
-                      Add an address in Twilio Console
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep('select')} className="flex-1">
                 Back
               </Button>
               <Button
                 onClick={handleProvision}
-                disabled={provisionMutation.isPending || !canProvision}
+                disabled={provisionMutation.isPending}
                 className="flex-1"
               >
                 {provisionMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

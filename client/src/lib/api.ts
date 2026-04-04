@@ -30,7 +30,7 @@ export const api = {
     },
 
     async available(country: string = 'AU'): Promise<AvailableNumber[]> {
-      const numbers = await twilio.searchAvailable(country);
+      const { numbers, numberType } = await twilio.searchAvailable(country);
       return numbers.map(n => ({
         phoneNumber: n.phone_number,
         friendlyName: n.friendly_name,
@@ -38,11 +38,12 @@ export const api = {
         region: n.region || '',
         capabilities: n.capabilities as unknown as Record<string, boolean>,
         addressRequirements: n.address_requirements || 'none',
+        numberType,
       }));
     },
 
-    async provision(phoneNumber: string, label: string, addressSid?: string): Promise<PhoneNumber> {
-      const purchased = await twilio.provisionNumber(phoneNumber, addressSid);
+    async provision(phoneNumber: string, label: string, addressSid?: string, bundleSid?: string): Promise<PhoneNumber> {
+      const purchased = await twilio.provisionNumber(phoneNumber, addressSid, bundleSid);
       const ts = now();
       const id = await db.numbers.add({
         phone_number: purchased.phone_number,

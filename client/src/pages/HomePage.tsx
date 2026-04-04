@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 function formatPhone(phone: string) {
   if (phone.startsWith('+61')) {
     const local = phone.slice(3);
-    return `+61 ${local.slice(0, 1)} ${local.slice(1, 5)} ${local.slice(5)}`;
+    return `+61 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}`;
   }
   if (phone.startsWith('+1')) {
     const local = phone.slice(2);
