@@ -7,6 +7,12 @@ const NOREPLY_SERVICE_NAME = 'burner-noreply';
 const NOREPLY_FUNCTION_PATH = '/noreply';
 const NOREPLY_URL_CACHE_KEY = 'burner_noreply_webhook_url';
 
+const DIALER_SERVICE_NAME = 'burner-dialer';
+const DIALER_FUNCTION_PATH = '/dial';
+const DIALER_URL_CACHE_KEY = 'burner_dialer_url';
+const TWIML_APP_CACHE_KEY = 'burner_twiml_app_sid';
+const API_KEY_CACHE_KEY = 'burner_api_key';
+
 function authHeaders(): HeadersInit {
   const { sid, token } = getCredentials();
   return {
@@ -58,12 +64,19 @@ async function serverlessRequest<T>(path: string, options?: RequestInit): Promis
   return res.json();
 }
 
-async function deployNoReplyFunction(): Promise<string> {
-  // Check for an existing service
+async function deployServerlessFunction(
+  serviceName: string,
+  friendlyName: string,
+  functionPath: string,
+  code: string,
+): Promise<string> {
   let serviceSid: string | null = null;
+  let existingEnv: { sid: string; domain_name: string } | null = null;
+  let existingFunc: { sid: string } | null = null;
+
   try {
     const data = await serverlessRequest<{ services: { sid: string; unique_name: string }[] }>('/Services');
-    const existing = data.services?.find(s => s.unique_name === NOREPLY_SERVICE_NAME);
+    const existing = data.services?.find(s => s.unique_name === serviceName);
     if (existing) {
       serviceSid = existing.sid;
       const envData = await serverlessRequest<{ environments: { sid: string; build_sid: string | null; domain_name: string }[] }>(
@@ -71,7 +84,18 @@ async function deployNoReplyFunction(): Promise<string> {
       );
       const env = envData.environments?.[0];
       if (env?.build_sid && env.domain_name) {
-        return `https://${env.domain_name}${NOREPLY_FUNCTION_PATH}`;
+        return `https://${env.domain_name}${functionPath}`;
+      }
+      if (env) {
+        existingEnv = { sid: env.sid, domain_name: env.domain_name };
+      }
+
+      const funcData = await serverlessRequest<{ functions: { sid: string; friendly_name: string }[] }>(
+        `/Services/${serviceSid}/Functions`
+      );
+      const fn = funcData.functions?.[0];
+      if (fn) {
+        existingFunc = { sid: fn.sid };
       }
     }
   } catch { /* service doesn't exist yet */ }
@@ -80,29 +104,29 @@ async function deployNoReplyFunction(): Promise<string> {
     const svc = await serverlessRequest<{ sid: string }>('/Services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formBody({ UniqueName: NOREPLY_SERVICE_NAME, FriendlyName: 'Burner No Reply', IncludeCredentials: 'true' }),
+      body: formBody({ UniqueName: serviceName, FriendlyName: friendlyName, IncludeCredentials: 'true' }),
     });
     serviceSid = svc.sid;
   }
 
-  const env = await serverlessRequest<{ sid: string; domain_name: string }>(`/Services/${serviceSid}/Environments`, {
+  const env = existingEnv ?? await serverlessRequest<{ sid: string; domain_name: string }>(`/Services/${serviceSid}/Environments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formBody({ UniqueName: 'production' }),
   });
 
-  const func = await serverlessRequest<{ sid: string }>(`/Services/${serviceSid}/Functions`, {
+  const funcName = functionPath.slice(1);
+  const func = existingFunc ?? await serverlessRequest<{ sid: string }>(`/Services/${serviceSid}/Functions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: formBody({ FriendlyName: 'noreply' }),
+    body: formBody({ FriendlyName: funcName }),
   });
 
-  const code = 'exports.handler = function(context, event, callback) {\n  callback(null, new Twilio.twiml.MessagingResponse());\n};\n';
   const blob = new Blob([code], { type: 'application/javascript' });
   const uploadForm = new FormData();
-  uploadForm.append('Path', NOREPLY_FUNCTION_PATH);
+  uploadForm.append('Path', functionPath);
   uploadForm.append('Visibility', 'public');
-  uploadForm.append('Content', blob, 'noreply.js');
+  uploadForm.append('Content', blob, `${funcName}.js`);
 
   const uploadRes = await fetch(
     `${SERVERLESS_UPLOAD_BASE}/Services/${serviceSid}/Functions/${func.sid}/Versions`,
@@ -131,15 +155,38 @@ async function deployNoReplyFunction(): Promise<string> {
   });
 
   const envInfo = await serverlessRequest<{ domain_name: string }>(`/Services/${serviceSid}/Environments/${env.sid}`);
-  return `https://${envInfo.domain_name}${NOREPLY_FUNCTION_PATH}`;
+  return `https://${envInfo.domain_name}${functionPath}`;
 }
+
+const NOREPLY_CODE =
+  'exports.handler = function(context, event, callback) {\n  callback(null, new Twilio.twiml.MessagingResponse());\n};\n';
+
+const DIALER_CODE = [
+  'exports.handler = function(context, event, callback) {',
+  '  const twiml = new Twilio.twiml.VoiceResponse();',
+  '  if (event.To) {',
+  '    const dial = twiml.dial({ callerId: event.CallerId || event.From });',
+  '    dial.number(event.To);',
+  '  } else {',
+  '    twiml.say("No destination specified.");',
+  '  }',
+  '  callback(null, twiml);',
+  '};',
+].join('\n');
 
 async function getNoReplyUrl(): Promise<string> {
   const cached = localStorage.getItem(NOREPLY_URL_CACHE_KEY);
   if (cached) return cached;
-
-  const url = await deployNoReplyFunction();
+  const url = await deployServerlessFunction(NOREPLY_SERVICE_NAME, 'Burner No Reply', NOREPLY_FUNCTION_PATH, NOREPLY_CODE);
   localStorage.setItem(NOREPLY_URL_CACHE_KEY, url);
+  return url;
+}
+
+async function getDialerUrl(): Promise<string> {
+  const cached = localStorage.getItem(DIALER_URL_CACHE_KEY);
+  if (cached) return cached;
+  const url = await deployServerlessFunction(DIALER_SERVICE_NAME, 'Burner Dialer', DIALER_FUNCTION_PATH, DIALER_CODE);
+  localStorage.setItem(DIALER_URL_CACHE_KEY, url);
   return url;
 }
 
@@ -309,6 +356,53 @@ export const twilio = {
       '/IncomingPhoneNumbers.json?PageSize=100'
     );
     return data.incoming_phone_numbers || [];
+  },
+
+  async ensureTwimlApp(): Promise<string> {
+    const cached = localStorage.getItem(TWIML_APP_CACHE_KEY);
+    if (cached) return cached;
+
+    const dialerUrl = await getDialerUrl();
+
+    const data = await twilioRequest<{ applications: { sid: string; friendly_name: string }[] }>(
+      '/Applications.json?PageSize=100'
+    );
+    const existing = data.applications?.find(a => a.friendly_name === 'Burner Dialer');
+    if (existing) {
+      await twilioRequest(`/Applications/${existing.sid}.json`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formBody({ VoiceUrl: dialerUrl, VoiceMethod: 'POST' }),
+      });
+      localStorage.setItem(TWIML_APP_CACHE_KEY, existing.sid);
+      return existing.sid;
+    }
+
+    const app = await twilioRequest<{ sid: string }>('/Applications.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody({ FriendlyName: 'Burner Dialer', VoiceUrl: dialerUrl, VoiceMethod: 'POST' }),
+    });
+    localStorage.setItem(TWIML_APP_CACHE_KEY, app.sid);
+    return app.sid;
+  },
+
+  async ensureApiKey(): Promise<{ sid: string; secret: string }> {
+    const cached = localStorage.getItem(API_KEY_CACHE_KEY);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch { /* fall through to create new key */ }
+    }
+
+    const key = await twilioRequest<{ sid: string; secret: string }>('/Keys.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody({ FriendlyName: 'Burner Voice' }),
+    });
+    const creds = { sid: key.sid, secret: key.secret };
+    localStorage.setItem(API_KEY_CACHE_KEY, JSON.stringify(creds));
+    return creds;
   },
 
   async getBalance(): Promise<{ balance: string; currency: string }> {

@@ -168,6 +168,16 @@ export const api = {
     },
   },
 
+  calls: {
+    async getCallInfo(conversationId: number): Promise<{ from: string; to: string }> {
+      const conv = await db.conversations.get(conversationId);
+      if (!conv) throw new Error('Conversation not found');
+      const number = await db.numbers.get(conv.number_id);
+      if (!number) throw new Error('Number not found');
+      return { from: number.phone_number, to: conv.contact_number };
+    },
+  },
+
   sync: {
     async syncNumbers(): Promise<{ added: number; removed: number }> {
       if (!hasCredentials()) return { added: 0, removed: 0 };

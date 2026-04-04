@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Send, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Pencil, Trash2, Phone, PhoneOff, Loader2 } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { requestMicPermission, makeVoiceCall, endVoiceCall, hasActiveCall } from '@/lib/voice';
 import type { Message } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,8 @@ export function ChatPage() {
   const [editingContact, setEditingContact] = useState(false);
   const [contactName, setContactName] = useState('');
   const prevMessageCount = useRef(0);
+  const [callStatus, setCallStatus] = useState<string | null>(null);
+  const [callLoading, setCallLoading] = useState(false);
 
   const { data: numbers } = useQuery({
     queryKey: ['numbers'],
@@ -106,6 +109,46 @@ export function ChatPage() {
       toast.success('Conversation deleted');
     },
   });
+
+  const TERMINAL_STATUSES = ['completed', 'canceled', 'failed'];
+
+  const handleStatusChange = useCallback((status: string) => {
+    setCallStatus(status);
+    if (TERMINAL_STATUSES.includes(status)) {
+      toast.info(`Call ${status}`);
+      setTimeout(() => setCallStatus(null), 2000);
+    }
+  }, []);
+
+  const handleCall = async () => {
+    if (!activeConvId || !conversation || !currentNumber) return;
+
+    if (hasActiveCall()) {
+      endVoiceCall();
+      setCallStatus(null);
+      toast.success('Call ended');
+      return;
+    }
+
+    setCallLoading(true);
+    try {
+      const hasMic = await requestMicPermission();
+      if (!hasMic) {
+        toast.error('Microphone permission is required for voice calls');
+        return;
+      }
+
+      const { from, to } = await api.calls.getCallInfo(activeConvId);
+      await makeVoiceCall(from, to, handleStatusChange);
+    } catch (err: any) {
+      toast.error(`Call failed: ${err.message}`);
+      setCallStatus(null);
+    } finally {
+      setCallLoading(false);
+    }
+  };
+
+  const isCallActive = callStatus && !TERMINAL_STATUSES.includes(callStatus);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -190,7 +233,7 @@ export function ChatPage() {
                 : `bg-muted text-foreground ${isLastInGroup ? 'rounded-[20px] rounded-bl-[6px]' : 'rounded-[20px]'}`
             }`}
           >
-            <p className="whitespace-pre-wrap break-words">{msg.body}</p>
+            <p className="whitespace-pre-wrap wrap-break-word">{msg.body}</p>
             <p className={`text-[10px] mt-0.5 text-right leading-none ${
               isOutbound ? 'text-primary-foreground/50' : 'text-muted-foreground/70'
             }`}>
@@ -237,6 +280,21 @@ export function ChatPage() {
               </p>
             )}
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-9 w-9 ${isCallActive ? 'text-destructive hover:text-destructive' : ''}`}
+            onClick={handleCall}
+            disabled={callLoading}
+          >
+            {callLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isCallActive ? (
+              <PhoneOff className="h-5 w-5" />
+            ) : (
+              <Phone className="h-5 w-5" />
+            )}
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-muted transition-colors">
               <MoreVertical className="h-5 w-5 text-muted-foreground" />
@@ -259,6 +317,31 @@ export function ChatPage() {
           </DropdownMenu>
         </div>
       </header>
+
+      {isCallActive && (
+        <div className="border-b border-border bg-green-500/10 backdrop-blur-sm px-4 py-2 max-w-lg mx-auto w-full">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              <span className="text-xs font-medium text-green-600 dark:text-green-400 capitalize">
+                {callStatus || 'connecting'}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-destructive hover:text-destructive"
+              onClick={() => { endVoiceCall(); setCallStatus(null); }}
+            >
+              <PhoneOff className="h-3.5 w-3.5 mr-1" />
+              End Call
+            </Button>
+          </div>
+        </div>
+      )}
 
       {editingContact && conversation && (
         <div className="border-b border-border bg-muted/30 backdrop-blur-sm px-4 py-3 max-w-lg mx-auto w-full">
