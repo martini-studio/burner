@@ -304,6 +304,13 @@ export const twilio = {
     return Array.from(unique.values());
   },
 
+  async listIncomingNumbers(): Promise<TwilioIncomingNumber[]> {
+    const data = await twilioRequest<{ incoming_phone_numbers: TwilioIncomingNumber[] }>(
+      '/IncomingPhoneNumbers.json?PageSize=100'
+    );
+    return data.incoming_phone_numbers || [];
+  },
+
   async getBalance(): Promise<{ balance: string; currency: string }> {
     return twilioRequest<{ balance: string; currency: string }>('/Balance.json');
   },

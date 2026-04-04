@@ -1,5 +1,6 @@
 import db from './db';
 import { twilio } from './twilio';
+import { hasCredentials } from './settings';
 import type { PhoneNumber, Conversation, Message, AvailableNumber } from '@/types';
 
 function now() {
@@ -168,6 +169,43 @@ export const api = {
   },
 
   sync: {
+    async syncNumbers(): Promise<{ added: number; removed: number }> {
+      if (!hasCredentials()) return { added: 0, removed: 0 };
+
+      const remoteNumbers = await twilio.listIncomingNumbers();
+      const localNumbers = await db.numbers.where('is_active').equals(1).toArray();
+      const localBySid = new Map(localNumbers.map(n => [n.twilio_sid, n]));
+      const remoteSids = new Set(remoteNumbers.map(n => n.sid));
+
+      let added = 0;
+      for (const remote of remoteNumbers) {
+        if (!localBySid.has(remote.sid)) {
+          const ts = now();
+          await db.numbers.add({
+            phone_number: remote.phone_number,
+            friendly_name: remote.friendly_name,
+            label: '',
+            country_code: detectCountry(remote.phone_number),
+            twilio_sid: remote.sid,
+            is_active: 1,
+            created_at: ts,
+            updated_at: ts,
+          });
+          added++;
+        }
+      }
+
+      let removed = 0;
+      for (const local of localNumbers) {
+        if (!remoteSids.has(local.twilio_sid)) {
+          await db.numbers.update(local.id!, { is_active: 0, updated_at: now() });
+          removed++;
+        }
+      }
+
+      return { added, removed };
+    },
+
     async pollIncoming(): Promise<number> {
       const numbers = await db.numbers.where('is_active').equals(1).toArray();
       let newCount = 0;

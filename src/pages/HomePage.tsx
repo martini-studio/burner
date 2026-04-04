@@ -51,7 +51,13 @@ export function HomePage() {
 
   const { data: numbers, isLoading } = useQuery({
     queryKey: ['numbers'],
-    queryFn: api.numbers.list,
+    queryFn: async () => {
+      if (hasCredentials()) {
+        await api.sync.syncNumbers();
+      }
+      return api.numbers.list();
+    },
+    staleTime: 0,
   });
 
   const { data: balance } = useQuery({
