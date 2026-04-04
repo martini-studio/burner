@@ -150,7 +150,7 @@ function NumberRow({
       className="flex items-center gap-3 px-4 py-3.5 active:bg-muted/50 transition-colors cursor-pointer select-none"
       onClick={onTap}
     >
-      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 text-xl">
+      <div className="w-12 h-12 rounded-full bg-linear-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 text-xl">
         {getCountryFlag(number.country_code)}
       </div>
       <div className="flex-1 min-w-0">
