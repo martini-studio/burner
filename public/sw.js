@@ -1,7 +1,8 @@
 const CACHE_NAME = 'burner-v1';
+const BASE = self.registration.scope;
 const STATIC_ASSETS = [
-  '/',
-  '/manifest.json',
+  BASE,
+  `${BASE}manifest.json`,
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,7 +38,7 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/'))
+      fetch(request).catch(() => caches.match(BASE))
     );
     return;
   }

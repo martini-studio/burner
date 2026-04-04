@@ -21,7 +21,7 @@ function AppContent() {
   useMessagePolling(queryClient);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <div className="flex flex-col h-dvh bg-background overflow-hidden">
         <Routes>
           <Route path="/" element={<HomePage />} />
