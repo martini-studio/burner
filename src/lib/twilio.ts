@@ -278,6 +278,23 @@ export const twilio = {
     return data.results || [];
   },
 
+  async getBundleAddressSid(bundleSid: string): Promise<string | undefined> {
+    ensureCredentials();
+    const { sid, token } = getCredentials();
+    const url = `https://numbers.twilio.com/v2/RegulatoryCompliance/Bundles/${bundleSid}/ItemAssignments?PageSize=50`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': 'Basic ' + btoa(`${sid}:${token}`) },
+    });
+    if (!res.ok) {
+      console.log('[getBundleAddressSid] request failed: %s', res.status);
+      return undefined;
+    }
+    const data = await res.json();
+    const items: { object_sid: string }[] = data.results || [];
+    console.log('[getBundleAddressSid] bundle=%s items:', bundleSid, items);
+    return items.find(i => i.object_sid.startsWith('AD'))?.object_sid;
+  },
+
   async provisionNumber(phoneNumber: string, addressSid?: string, bundleSid?: string): Promise<TwilioIncomingNumber> {
     const params: Record<string, string> = { PhoneNumber: phoneNumber };
 

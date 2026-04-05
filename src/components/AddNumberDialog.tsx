@@ -103,22 +103,13 @@ export function AddNumberDialog({ open, onOpenChange }: Props) {
     setSelectedNumberType(num.numberType || '');
   };
 
-  const handleProvision = () => {
+  const handleProvision = async () => {
     if (!selectedNumber) return;
 
-    const needsAddress = selectedAddressReq === 'any' || selectedAddressReq === 'local' || selectedAddressReq === 'foreign';
-    const matchingAddresses = selectedAddressReq === 'local'
-      ? (addresses || []).filter(a => a.iso_country === country)
-      : (addresses || []);
-    const addressSid = needsAddress && matchingAddresses.length > 0 ? matchingAddresses[0].sid : undefined;
-
-    let matchingBundles = (bundles || []).filter(
-      b => b.iso_country === country && b.number_type === selectedNumberType
-    );
-    if (matchingBundles.length === 0) {
-      matchingBundles = (bundles || []).filter(b => b.iso_country === country);
-    }
-    const bundleSid = matchingBundles.length > 0 ? matchingBundles[0].sid : undefined;
+    const approvedBundles = (bundles || []).filter(b => b.status === 'twilio-approved');
+    const bundleSid = needsBundleForCountry(country, selectedNumberType) && approvedBundles.length > 0
+      ? approvedBundles[0].sid
+      : undefined;
 
     if (!bundleSid && needsBundleForCountry(country, selectedNumberType)) {
       toast.error(
@@ -127,6 +118,23 @@ export function AddNumberDialog({ open, onOpenChange }: Props) {
       );
       return;
     }
+
+    let addressSid: string | undefined;
+    if (bundleSid) {
+      addressSid = await twilio.getBundleAddressSid(bundleSid);
+      console.log('[provision] address from bundle items: %s', addressSid);
+    }
+    if (!addressSid) {
+      const needsAddress = selectedAddressReq === 'any' || selectedAddressReq === 'local' || selectedAddressReq === 'foreign';
+      if (needsAddress) {
+        const matchingAddresses = selectedAddressReq === 'local'
+          ? (addresses || []).filter(a => a.iso_country === country)
+          : (addresses || []);
+        addressSid = matchingAddresses.length > 0 ? matchingAddresses[0].sid : undefined;
+      }
+    }
+
+    console.log('[provision] country=%s numberType=%s bundleSid=%s addressSid=%s', country, selectedNumberType, bundleSid, addressSid);
 
     provisionMutation.mutate({ phoneNumber: selectedNumber, label, addressSid, bundleSid });
   };
