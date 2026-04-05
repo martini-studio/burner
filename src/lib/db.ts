@@ -20,6 +20,7 @@ export interface DbConversation {
   last_message: string | null;
   last_message_at: string | null;
   unread_count: number;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +45,18 @@ db.version(1).stores({
   numbers: '++id, phone_number, twilio_sid, is_active',
   conversations: '++id, number_id, contact_number, [number_id+contact_number]',
   messages: '++id, conversation_id, twilio_sid, created_at',
+});
+
+db.version(2).stores({
+  numbers: '++id, phone_number, twilio_sid, is_active',
+  conversations: '++id, number_id, contact_number, [number_id+contact_number]',
+  messages: '++id, conversation_id, twilio_sid, created_at',
+}).upgrade(tx => {
+  return tx.table('conversations').toCollection().modify(conv => {
+    if (conv.deleted_at === undefined) {
+      conv.deleted_at = null;
+    }
+  });
 });
 
 export default db;

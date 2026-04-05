@@ -23,7 +23,7 @@ export const api = {
       for (const n of numbers) {
         const unread = await db.conversations
           .where('number_id').equals(n.id!)
-          .filter(c => c.unread_count > 0)
+          .filter(c => c.unread_count > 0 && !c.deleted_at)
           .count();
         result.push({ ...n, id: n.id!, unread_conversations: unread });
       }
@@ -86,7 +86,10 @@ export const api = {
 
   conversations: {
     async listByNumber(numberId: number): Promise<Conversation[]> {
-      const convs = await db.conversations.where('number_id').equals(numberId).toArray();
+      const convs = await db.conversations
+        .where('number_id').equals(numberId)
+        .filter(c => !c.deleted_at)
+        .toArray();
       convs.sort((a, b) => {
         const aTime = a.last_message_at || a.created_at;
         const bTime = b.last_message_at || b.created_at;
@@ -100,7 +103,22 @@ export const api = {
         .where('[number_id+contact_number]')
         .equals([number_id, contact_number])
         .first();
-      if (existing) return { ...existing, id: existing.id! };
+
+      if (existing) {
+        if (existing.deleted_at) {
+          const ts = now();
+          await db.conversations.update(existing.id!, {
+            contact_name: contact_name || null,
+            last_message: null,
+            last_message_at: null,
+            unread_count: 0,
+            deleted_at: null,
+            updated_at: ts,
+          });
+          return (await db.conversations.get(existing.id!))! as Conversation;
+        }
+        return { ...existing, id: existing.id! };
+      }
 
       const ts = now();
       const id = await db.conversations.add({
@@ -110,6 +128,7 @@ export const api = {
         last_message: null,
         last_message_at: null,
         unread_count: 0,
+        deleted_at: null,
         created_at: ts,
         updated_at: ts,
       });
@@ -128,7 +147,7 @@ export const api = {
 
     async delete(id: number): Promise<{ success: boolean }> {
       await db.messages.where('conversation_id').equals(id).delete();
-      await db.conversations.delete(id);
+      await db.conversations.update(id, { deleted_at: now(), updated_at: now() });
       return { success: true };
     },
   },
@@ -238,6 +257,8 @@ export const api = {
               .equals([num.id!, contactNumber])
               .first();
 
+            if (conv?.deleted_at) continue;
+
             if (!conv) {
               const ts = now();
               const convId = await db.conversations.add({
@@ -247,6 +268,7 @@ export const api = {
                 last_message: null,
                 last_message_at: null,
                 unread_count: 0,
+                deleted_at: null,
                 created_at: ts,
                 updated_at: ts,
               });

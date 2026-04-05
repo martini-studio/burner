@@ -386,7 +386,7 @@ export function ChatPage() {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto overscroll-contain py-2"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2"
       >
         <div className="max-w-lg mx-auto w-full">
           {messagesLoading ? (

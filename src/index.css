@@ -90,11 +90,15 @@
 
   html {
     @apply font-sans;
+    height: 100%;
+    overflow: hidden;
   }
 
   body {
     @apply bg-background text-foreground;
     margin: 0;
+    height: 100%;
+    overflow: hidden;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
