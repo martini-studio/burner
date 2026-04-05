@@ -17,7 +17,7 @@ import {
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 import { NewConversationHeader } from '@/components/NewConversationHeader';
-import { PageTransition } from '@/components/PageTransition';
+import { AppHeader } from '@/components/AppHeader';
 
 function formatPhone(phone: string) {
   if (phone.startsWith('+61')) {
@@ -286,74 +286,70 @@ export function ChatPage() {
 
   if (isNewConversation) {
     return (
-      <PageTransition>
-        <NewConversationHeader
-          onBack={() => navigate(`/number/${numberId}`)}
-          onSend={handleNewConversation}
-          fromNumber={currentNumber?.phone_number || ''}
-          isSending={newMsgSending}
-        />
-      </PageTransition>
+      <NewConversationHeader
+        onBack={() => navigate(`/number/${numberId}`)}
+        onSend={handleNewConversation}
+        fromNumber={currentNumber?.phone_number || ''}
+        isSending={newMsgSending}
+      />
     );
   }
 
   return (
-    <PageTransition>
-      <header className="shrink-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
-        <div className="flex items-center gap-1 px-2 h-14 max-w-lg mx-auto w-full">
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate(`/number/${numberId}`)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div
-            className="flex-1 min-w-0 px-1 cursor-pointer"
-            onClick={() => setEditingContact(true)}
-          >
-            <h1 className="text-[15px] font-semibold truncate">
-              {conversation?.contact_name || formatPhone(conversation?.contact_number || '')}
-            </h1>
-            {conversation?.contact_name && (
-              <p className="text-xs text-muted-foreground truncate">
-                {formatPhone(conversation.contact_number)}
-              </p>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-9 w-9 ${isCallActive ? 'text-destructive hover:text-destructive' : ''}`}
-            onClick={handleCall}
-            disabled={callLoading}
-          >
-            {callLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : isCallActive ? (
-              <PhoneOff className="h-5 w-5" />
-            ) : (
-              <Phone className="h-5 w-5" />
-            )}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-muted transition-colors">
-              <MoreVertical className="h-5 w-5 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setEditingContact(true)}>
-                <Pencil className="h-4 w-4 mr-2" /> Edit Contact
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => {
-                  if (activeConvId && confirm('Delete this conversation?')) {
-                    deleteConvMutation.mutate(activeConvId);
-                  }
-                }}
-              >
-                <Trash2 className="h-4 w-4 mr-2" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <>
+      <AppHeader className="gap-1 px-2">
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate(`/number/${numberId}`)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div
+          className="flex-1 min-w-0 px-1 cursor-pointer"
+          onClick={() => setEditingContact(true)}
+        >
+          <h1 className="text-[15px] font-semibold truncate">
+            {conversation?.contact_name || formatPhone(conversation?.contact_number || '')}
+          </h1>
+          {conversation?.contact_name && (
+            <p className="text-xs text-muted-foreground truncate">
+              {formatPhone(conversation.contact_number)}
+            </p>
+          )}
         </div>
-      </header>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-9 w-9 ${isCallActive ? 'text-destructive hover:text-destructive' : ''}`}
+          onClick={handleCall}
+          disabled={callLoading}
+        >
+          {callLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isCallActive ? (
+            <PhoneOff className="h-5 w-5" />
+          ) : (
+            <Phone className="h-5 w-5" />
+          )}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-muted transition-colors">
+            <MoreVertical className="h-5 w-5 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setEditingContact(true)}>
+              <Pencil className="h-4 w-4 mr-2" /> Edit Contact
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                if (activeConvId && confirm('Delete this conversation?')) {
+                  deleteConvMutation.mutate(activeConvId);
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </AppHeader>
 
       {isCallActive && (
         <div className="border-b border-border bg-green-500/10 backdrop-blur-sm px-4 py-2 max-w-lg mx-auto w-full">
@@ -462,6 +458,6 @@ export function ChatPage() {
           </form>
         </div>
       </div>
-    </PageTransition>
+    </>
   );
 }

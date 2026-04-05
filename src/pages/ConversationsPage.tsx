@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PageTransition } from '@/components/PageTransition';
+import { AppHeader } from '@/components/AppHeader';
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
@@ -71,32 +71,30 @@ export function ConversationsPage() {
   });
 
   return (
-    <PageTransition>
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
-        <div className="flex items-center gap-1 px-2 h-14 max-w-lg mx-auto w-full">
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-0 px-1">
-            <h1 className="text-[15px] font-semibold truncate">
-              {currentNumber?.label || formatPhone(currentNumber?.phone_number || '')}
-            </h1>
-            {currentNumber?.label && (
-              <p className="text-xs text-muted-foreground truncate">
-                {formatPhone(currentNumber.phone_number)}
-              </p>
-            )}
-          </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-9 w-9"
-            onClick={() => navigate(`/number/${numberId}/new`)}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
+    <>
+      <AppHeader className="gap-1 px-2">
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/')}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex-1 min-w-0 px-1">
+          <h1 className="text-[15px] font-semibold truncate">
+            {currentNumber?.label || formatPhone(currentNumber?.phone_number || '')}
+          </h1>
+          {currentNumber?.label && (
+            <p className="text-xs text-muted-foreground truncate">
+              {formatPhone(currentNumber.phone_number)}
+            </p>
+          )}
         </div>
-      </header>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-9 w-9"
+          onClick={() => navigate(`/number/${numberId}/new`)}
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      </AppHeader>
 
       <main className="flex-1 overflow-y-auto overscroll-contain">
         <div className="max-w-lg mx-auto w-full">
@@ -143,7 +141,7 @@ export function ConversationsPage() {
           )}
         </div>
       </main>
-    </PageTransition>
+    </>
   );
 }
 
@@ -207,7 +205,7 @@ function ConversationRow({
           if (!isDragging.current) onTap();
         }}
       >
-        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getAvatarColor(conversation.id)} flex items-center justify-center shrink-0`}>
+        <div className={`w-12 h-12 rounded-full bg-linear-to-br ${getAvatarColor(conversation.id)} flex items-center justify-center shrink-0`}>
           <span className="text-sm font-semibold text-white">
             {getInitials(conversation.contact_name, conversation.contact_number)}
           </span>

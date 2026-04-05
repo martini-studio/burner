@@ -14,7 +14,7 @@ export function PageTransition({ children }: Props) {
 
   return (
     <div
-      className={`flex flex-col min-h-0 h-full transition-all duration-200 ease-out ${
+      className={`flex flex-col min-h-0 h-dvh transition-all duration-200 ease-out ${
         mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
       }`}
     >

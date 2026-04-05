@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { PageTransition } from '@/components/PageTransition';
+import { AppHeader } from '@/components/AppHeader';
 import { getSettings, saveSettings, type AppSettings } from '@/lib/settings';
 import { twilio } from '@/lib/twilio';
 import { toast } from 'sonner';
@@ -97,15 +97,13 @@ export function SettingsPage() {
   }
 
   return (
-    <PageTransition>
-      <header className="shrink-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
-        <div className="flex items-center gap-1 px-2 h-14 max-w-lg mx-auto w-full">
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-[15px] font-semibold">Settings</h1>
-        </div>
-      </header>
+    <>
+      <AppHeader className="gap-1 px-2">
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/')}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-[15px] font-semibold">Settings</h1>
+      </AppHeader>
 
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         <div className="max-w-lg mx-auto w-full px-4 py-6 space-y-8">
@@ -315,6 +313,6 @@ export function SettingsPage() {
           </div>
         </div>
       </main>
-    </PageTransition>
+    </>
   );
 }

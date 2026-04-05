@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
+import { AppLayout } from '@/components/AppLayout';
 import { HomePage } from '@/pages/HomePage';
 import { ConversationsPage } from '@/pages/ConversationsPage';
 import { ChatPage } from '@/pages/ChatPage';
@@ -24,11 +25,13 @@ function AppContent() {
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <div className="flex h-dvh min-w-0 flex-col bg-background">
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/number/:numberId" element={<ConversationsPage />} />
-          <Route path="/number/:numberId/chat/:conversationId" element={<ChatPage />} />
-          <Route path="/number/:numberId/new" element={<ChatPage />} />
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/number/:numberId" element={<ConversationsPage />} />
+            <Route path="/number/:numberId/chat/:conversationId" element={<ChatPage />} />
+            <Route path="/number/:numberId/new" element={<ChatPage />} />
+          </Route>
         </Routes>
       </div>
     </BrowserRouter>
