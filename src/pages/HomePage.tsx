@@ -78,7 +78,7 @@ export function HomePage() {
 
   return (
     <PageTransition>
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
+      <header className="shrink-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
         <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto w-full">
           <div className="flex items-center gap-2.5">
             <h1 className="text-lg font-semibold tracking-tight">Burner</h1>

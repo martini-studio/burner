@@ -53,7 +53,7 @@ export function ChatPage() {
   );
   const [isNewConversation] = useState(!conversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [editingContact, setEditingContact] = useState(false);
   const [contactName, setContactName] = useState('');
   const prevMessageCount = useRef(0);
@@ -83,8 +83,10 @@ export function ChatPage() {
   const sendMutation = useMutation({
     mutationFn: ({ convId, body }: { convId: number; body: string }) =>
       api.messages.send(convId, body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', activeConvId] });
+    onSuccess: (newMessage, { convId }) => {
+      queryClient.setQueryData<Message[]>(['messages', convId], (old) =>
+        old ? [...old, newMessage] : [newMessage]
+      );
       queryClient.invalidateQueries({ queryKey: ['conversations', numberId] });
       setMessage('');
     },
@@ -172,11 +174,24 @@ export function ChatPage() {
     }
   }, [conversation]);
 
+  const resizeTextarea = useCallback(() => {
+    const ta = inputRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    const lineHeight = 20;
+    const maxHeight = lineHeight * 4 + 16; // 4 lines + vertical padding
+    ta.style.height = `${Math.min(ta.scrollHeight, maxHeight)}px`;
+  }, []);
+
   const handleSend = async () => {
     const text = message.trim();
     if (!text || !activeConvId) return;
     sendMutation.mutate({ convId: activeConvId, body: text });
   };
+
+  useEffect(() => {
+    resizeTextarea();
+  }, [message, resizeTextarea]);
 
   const [newMsgSending, setNewMsgSending] = useState(false);
 
@@ -262,7 +277,7 @@ export function ChatPage() {
 
   return (
     <PageTransition>
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
+      <header className="shrink-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
         <div className="flex items-center gap-1 px-2 h-14 max-w-lg mx-auto w-full">
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate(`/number/${numberId}`)}>
             <ArrowLeft className="h-5 w-5" />
@@ -392,19 +407,26 @@ export function ChatPage() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
+      <div className="shrink-0 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
         <div className="max-w-lg mx-auto w-full px-3 py-2">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-            className="flex items-end gap-2"
+            className="flex items-center gap-2"
           >
             <div className="flex-1">
-              <Input
+              <textarea
                 ref={inputRef}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder="Message..."
-                className="rounded-full h-10 bg-muted/60 border-0 focus-visible:ring-1 focus-visible:ring-primary/30 px-4 text-[15px]"
+                rows={1}
+                className="w-full resize-none rounded-[20px] min-h-10 bg-muted/60 border-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30 px-4 py-2.5 text-[15px] leading-5 overflow-y-auto"
               />
             </div>
             <Button

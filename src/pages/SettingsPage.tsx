@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Loader2, CheckCircle2, XCircle, Database, Trash2 } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, CheckCircle2, XCircle, Database, Trash2, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ import { getSettings, saveSettings, type AppSettings } from '@/lib/settings';
 import { twilio } from '@/lib/twilio';
 import { toast } from 'sonner';
 import db from '@/lib/db';
+import { useTheme } from '@/hooks/use-theme';
 
 const COUNTRIES = [
   { code: 'AU', name: 'Australia', flag: '\u{1F1E6}\u{1F1FA}' },
@@ -28,6 +29,7 @@ const COUNTRIES = [
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState<AppSettings>(getSettings);
   const [showToken, setShowToken] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -96,7 +98,7 @@ export function SettingsPage() {
 
   return (
     <PageTransition>
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
+      <header className="shrink-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
         <div className="flex items-center gap-1 px-2 h-14 max-w-lg mx-auto w-full">
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/')}>
             <ArrowLeft className="h-5 w-5" />
@@ -186,6 +188,30 @@ export function SettingsPage() {
           <section className="space-y-4">
             <div>
               <h2 className="text-base font-semibold">Preferences</h2>
+            </div>
+
+            <div>
+              <Label className="text-sm mb-2 block">Appearance</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: 'light', label: 'Light', icon: Sun },
+                  { value: 'dark', label: 'Dark', icon: Moon },
+                  { value: 'system', label: 'System', icon: Monitor },
+                ] as const).map(({ value, label, icon: Icon }) => (
+                  <button
+                    key={value}
+                    onClick={() => setTheme(value)}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-xs font-medium transition-colors ${
+                      theme === value
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
