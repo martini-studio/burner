@@ -190,14 +190,6 @@ export function ChatPage() {
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const onResize = () => scrollToBottom();
-    vv.addEventListener('resize', onResize);
-    return () => vv.removeEventListener('resize', onResize);
-  }, [scrollToBottom]);
-
-  useEffect(() => {
     if (conversation) {
       setContactName(conversation.contact_name || '');
     }
