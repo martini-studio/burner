@@ -12,6 +12,22 @@
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <title>Burner</title>
+    <script>
+      (function() {
+        var d = document.documentElement;
+        function update() {
+          var vv = window.visualViewport;
+          d.style.setProperty('--app-height', (vv ? vv.height : window.innerHeight) + 'px');
+        }
+        update();
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', update);
+          window.visualViewport.addEventListener('scroll', update);
+        } else {
+          window.addEventListener('resize', update);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

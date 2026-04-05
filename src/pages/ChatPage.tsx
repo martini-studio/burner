@@ -83,14 +83,35 @@ export function ChatPage() {
   const sendMutation = useMutation({
     mutationFn: ({ convId, body }: { convId: number; body: string }) =>
       api.messages.send(convId, body),
+    onMutate: async ({ convId, body }) => {
+      await queryClient.cancelQueries({ queryKey: ['messages', convId] });
+      const previous = queryClient.getQueryData<Message[]>(['messages', convId]);
+      const optimistic: Message = {
+        id: -Date.now(),
+        conversation_id: convId,
+        twilio_sid: null,
+        direction: 'outbound',
+        body,
+        status: 'sending',
+        created_at: new Date().toISOString().replace('Z', ''),
+      };
+      queryClient.setQueryData<Message[]>(['messages', convId], (old) =>
+        old ? [...old, optimistic] : [optimistic]
+      );
+      return { previous, convId };
+    },
     onSuccess: (newMessage, { convId }) => {
       queryClient.setQueryData<Message[]>(['messages', convId], (old) =>
-        old ? [...old, newMessage] : [newMessage]
+        old?.map(m => m.id < 0 ? newMessage : m) ?? [newMessage]
       );
       queryClient.invalidateQueries({ queryKey: ['conversations', numberId] });
-      setMessage('');
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error, { convId }, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['messages', convId], context.previous);
+      }
+      toast.error(err.message);
+    },
   });
 
   const updateContactMutation = useMutation({
@@ -194,6 +215,7 @@ export function ChatPage() {
   const handleSend = async () => {
     const text = message.trim();
     if (!text || !activeConvId) return;
+    setMessage('');
     sendMutation.mutate({ convId: activeConvId, body: text });
   };
 
