@@ -190,6 +190,21 @@ export function ChatPage() {
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    let prevHeight = vv.height;
+    const onResize = () => {
+      const shrank = vv.height < prevHeight;
+      prevHeight = vv.height;
+      if (shrank) scrollToBottom();
+    };
+
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, [scrollToBottom]);
+
+  useEffect(() => {
     if (conversation) {
       setContactName(conversation.contact_name || '');
     }
@@ -404,7 +419,7 @@ export function ChatPage() {
 
       <div
         ref={scrollRef}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2"
+        className="flex-1 h-lvh min-h-0 py-2"
       >
         <div className="max-w-lg mx-auto w-full">
           {messagesLoading ? (
@@ -425,7 +440,7 @@ export function ChatPage() {
         </div>
       </div>
 
-      <div className="shrink-0 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
+      <div className="mt-auto shrink-0 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
         <div className="max-w-lg mx-auto w-full px-3 py-2">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}

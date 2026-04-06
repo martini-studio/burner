@@ -24,6 +24,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    host: true,
+  },
   build: {
     chunkSizeWarningLimit: 700,
   },

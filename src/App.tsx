@@ -23,7 +23,7 @@ function AppContent() {
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <div className="flex h-dvh min-w-0 flex-col bg-background">
+      <div className="bg-background">
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
