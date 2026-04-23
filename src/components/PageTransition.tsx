@@ -14,7 +14,7 @@ export function PageTransition({ children }: Props) {
 
   return (
     <div
-      className={`transition-all duration-200 ease-out ${
+      className={`relative h-dvh overflow-hidden transition-all duration-200 ease-out ${
         mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
       }`}
     >

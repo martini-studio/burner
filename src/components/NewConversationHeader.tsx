@@ -45,7 +45,7 @@ export function NewConversationHeader({ onBack, onSend, fromNumber, isSending }:
 
   return (
     <>
-      <header className="fixed top-0 inset-x-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
+      <header className="absolute top-0 inset-x-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border safe-area-top">
         <div className="flex items-center gap-1 px-2 h-14 max-w-lg mx-auto w-full">
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
@@ -54,26 +54,28 @@ export function NewConversationHeader({ onBack, onSend, fromNumber, isSending }:
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto w-full px-4 pt-app-header pb-app-footer">
-        <div className="pt-4 pb-2 border-b border-border">
-          <div className="flex items-center gap-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider shrink-0">To</p>
-            <Input
-              autoFocus
-              type="tel"
-              placeholder="Phone number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="flex-1 h-9 border-0 bg-transparent p-0 text-[15px] focus-visible:ring-0 shadow-none"
-            />
+      <div className="h-full overflow-y-auto overscroll-contain pt-app-header pb-app-footer">
+        <div className="max-w-lg mx-auto w-full px-4">
+          <div className="pt-4 pb-2 border-b border-border">
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider shrink-0">To</p>
+              <Input
+                autoFocus
+                type="tel"
+                placeholder="Phone number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="flex-1 h-9 border-0 bg-transparent p-0 text-[15px] focus-visible:ring-0 shadow-none"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5 mb-1 leading-relaxed">
+              Numbers starting with 0 get +61 automatically. International numbers need + country code.
+            </p>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1.5 mb-1 leading-relaxed">
-            Numbers starting with 0 get +61 automatically. International numbers need + country code.
-          </p>
         </div>
       </div>
 
-      <div className="fixed bottom-0 inset-x-0 z-20 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
+      <div className="absolute bottom-0 inset-x-0 z-20 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
         <div className="max-w-lg mx-auto w-full px-3 py-2">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}

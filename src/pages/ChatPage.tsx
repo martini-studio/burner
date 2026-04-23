@@ -52,6 +52,7 @@ export function ChatPage() {
     conversationId ? Number(conversationId) : null
   );
   const [isNewConversation] = useState(!conversationId);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [editingContact, setEditingContact] = useState(false);
@@ -174,8 +175,10 @@ export function ChatPage() {
   const isCallActive = callStatus && !TERMINAL_STATUSES.includes(callStatus);
 
   const scrollToBottom = useCallback(() => {
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({
+      top: el.scrollHeight,
       behavior: prevMessageCount.current > 0 ? 'smooth' : 'auto',
     });
   }, []);
@@ -382,7 +385,11 @@ export function ChatPage() {
         </DropdownMenu>
       </AppHeader>
 
-      <div className="max-w-lg mx-auto w-full pt-app-header pb-app-footer">
+      <div
+        ref={scrollRef}
+        className="h-full overflow-y-auto overscroll-contain pt-app-header pb-app-footer"
+      >
+        <div className="max-w-lg mx-auto w-full">
         {isCallActive && (
           <div className="border-b border-border bg-green-500/10 backdrop-blur-sm px-4 py-2">
             <div className="flex items-center justify-between">
@@ -451,11 +458,12 @@ export function ChatPage() {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       <div
         ref={footerRef}
-        className="fixed bottom-0 inset-x-0 z-20 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom"
+        className="absolute bottom-0 inset-x-0 z-20 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom"
       >
         <div className="max-w-lg mx-auto w-full px-3 py-2">
           <form

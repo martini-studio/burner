@@ -97,7 +97,8 @@ export function HomePage() {
         </div>
       </AppHeader>
 
-        <div className="max-w-lg mx-auto w-full pt-app-header">
+      <div className="h-full overflow-y-auto overscroll-contain pt-app-header">
+        <div className="max-w-lg mx-auto w-full">
           {isLoading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3].map((i) => (
@@ -141,6 +142,7 @@ export function HomePage() {
             </div>
           )}
         </div>
+      </div>
 
       <AddNumberDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
       <EditLabelDialog
