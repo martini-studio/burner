@@ -96,8 +96,8 @@ export function ConversationsPage() {
         </Button>
       </AppHeader>
 
-      <main className="flex-1 overflow-y-auto overscroll-contain">
-        <div className="max-w-lg mx-auto w-full">
+      <main>
+        <div className="max-w-lg mx-auto w-full pt-app-header">
           {isLoading ? (
             <div className="divide-y divide-border">
               {[1, 2, 3].map((i) => (

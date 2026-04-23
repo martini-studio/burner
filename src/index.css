@@ -103,10 +103,23 @@
   }
 }
 
+:root {
+  --header-height: calc(3.5rem + env(safe-area-inset-top, 0px));
+  --footer-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+}
+
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .safe-area-top {
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pt-app-header {
+  padding-top: var(--header-height);
+}
+
+.pb-app-footer {
+  padding-bottom: var(--footer-height);
 }

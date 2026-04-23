@@ -52,7 +52,7 @@ export function ChatPage() {
     conversationId ? Number(conversationId) : null
   );
   const [isNewConversation] = useState(!conversationId);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [editingContact, setEditingContact] = useState(false);
   const [contactName, setContactName] = useState('');
@@ -174,12 +174,28 @@ export function ChatPage() {
   const isCallActive = callStatus && !TERMINAL_STATUSES.includes(callStatus);
 
   const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: prevMessageCount.current > 0 ? 'smooth' : 'auto',
-      });
-    }
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: prevMessageCount.current > 0 ? 'smooth' : 'auto',
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = footerRef.current;
+    if (!el) return;
+    const update = () => {
+      document.documentElement.style.setProperty(
+        '--footer-height',
+        `${el.offsetHeight}px`
+      );
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty('--footer-height');
+    };
   }, []);
 
   useEffect(() => {
@@ -366,62 +382,59 @@ export function ChatPage() {
         </DropdownMenu>
       </AppHeader>
 
-      {isCallActive && (
-        <div className="border-b border-border bg-green-500/10 backdrop-blur-sm px-4 py-2 max-w-lg mx-auto w-full">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
-              <span className="text-xs font-medium text-green-600 dark:text-green-400 capitalize">
-                {callStatus || 'connecting'}
-              </span>
+      <div className="max-w-lg mx-auto w-full pt-app-header pb-app-footer">
+        {isCallActive && (
+          <div className="border-b border-border bg-green-500/10 backdrop-blur-sm px-4 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                </span>
+                <span className="text-xs font-medium text-green-600 dark:text-green-400 capitalize">
+                  {callStatus || 'connecting'}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-destructive hover:text-destructive"
+                onClick={() => { endVoiceCall(); setCallStatus(null); }}
+              >
+                <PhoneOff className="h-3.5 w-3.5 mr-1" />
+                End Call
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-destructive hover:text-destructive"
-              onClick={() => { endVoiceCall(); setCallStatus(null); }}
-            >
-              <PhoneOff className="h-3.5 w-3.5 mr-1" />
-              End Call
-            </Button>
           </div>
-        </div>
-      )}
+        )}
 
-      {editingContact && conversation && (
-        <div className="border-b border-border bg-muted/30 backdrop-blur-sm px-4 py-3 max-w-lg mx-auto w-full">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              updateContactMutation.mutate({ id: conversation.id, name: contactName });
-            }}
-            className="flex gap-2"
-          >
-            <Input
-              autoFocus
-              placeholder="Contact name"
-              value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
-              className="flex-1 h-9 rounded-full"
-            />
-            <Button type="submit" size="sm" className="rounded-full" disabled={updateContactMutation.isPending}>
-              Save
-            </Button>
-            <Button type="button" size="sm" variant="ghost" className="rounded-full" onClick={() => setEditingContact(false)}>
-              Cancel
-            </Button>
-          </form>
-        </div>
-      )}
+        {editingContact && conversation && (
+          <div className="border-b border-border bg-muted/30 backdrop-blur-sm px-4 py-3">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                updateContactMutation.mutate({ id: conversation.id, name: contactName });
+              }}
+              className="flex gap-2"
+            >
+              <Input
+                autoFocus
+                placeholder="Contact name"
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                className="flex-1 h-9 rounded-full"
+              />
+              <Button type="submit" size="sm" className="rounded-full" disabled={updateContactMutation.isPending}>
+                Save
+              </Button>
+              <Button type="button" size="sm" variant="ghost" className="rounded-full" onClick={() => setEditingContact(false)}>
+                Cancel
+              </Button>
+            </form>
+          </div>
+        )}
 
-      <div
-        ref={scrollRef}
-        className="flex-1 h-lvh min-h-0 py-2"
-      >
-        <div className="max-w-lg mx-auto w-full">
+        <div className="py-2">
           {messagesLoading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3, 4].map(i => (
@@ -440,7 +453,10 @@ export function ChatPage() {
         </div>
       </div>
 
-      <div className="mt-auto shrink-0 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">
+      <div
+        ref={footerRef}
+        className="fixed bottom-0 inset-x-0 z-20 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom"
+      >
         <div className="max-w-lg mx-auto w-full px-3 py-2">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}

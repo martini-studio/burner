@@ -97,7 +97,7 @@ export function HomePage() {
         </div>
       </AppHeader>
 
-        <div className="max-w-lg mx-auto w-full flex-1">
+        <div className="max-w-lg mx-auto w-full pt-app-header">
           {isLoading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3].map((i) => (

@@ -105,8 +105,8 @@ export function SettingsPage() {
         <h1 className="text-[15px] font-semibold">Settings</h1>
       </AppHeader>
 
-      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-        <div className="max-w-lg mx-auto w-full px-4 py-6 space-y-8">
+      <main>
+        <div className="max-w-lg mx-auto w-full px-4 py-6 space-y-8 pt-app-header">
           <section className="space-y-4">
             <div>
               <h2 className="text-base font-semibold">Twilio Credentials</h2>
